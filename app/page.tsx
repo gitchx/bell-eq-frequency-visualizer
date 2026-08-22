@@ -1,14 +1,13 @@
 'use client';
 import { useId, useMemo, useState } from 'react';
+import { magnitudeDb, peakingFilter } from '../lib/biquad';
 const FS=48000, FMIN=20, FMAX=20000, DMIN=-24, DMAX=24;
 const logToFreq=(v:number)=>FMIN*Math.pow(FMAX/FMIN,v/1000);
 const freqToLog=(v:number)=>Math.log(v/FMIN)/Math.log(FMAX/FMIN)*1000;
 const fmtFreq=(v:number)=>v>=1000?`${(v/1000).toFixed(v>=10000?1:2).replace(/0+$/,'').replace(/\.$/,'')} kHz`:`${Math.round(v)} Hz`;
-function coeffs(f:number,g:number,q:number){const A=Math.pow(10,g/40),w=2*Math.PI*f/FS,a=Math.sin(w)/(2*q),c=Math.cos(w),a0=1+a/A;return{b0:(1+a*A)/a0,b1:-2*c/a0,b2:(1-a*A)/a0,a1:-2*c/a0,a2:(1-a/A)/a0}}
-function db(c:ReturnType<typeof coeffs>,f:number){const w=2*Math.PI*f/FS,c1=Math.cos(w),s1=Math.sin(w),c2=Math.cos(2*w),s2=Math.sin(2*w),nr=c.b0+c.b1*c1+c.b2*c2,ni=-c.b1*s1-c.b2*s2,dr=1+c.a1*c1+c.a2*c2,di=-c.a1*s1-c.a2*s2;return 20*Math.log10(Math.hypot(nr,ni)/Math.hypot(dr,di))}
 export default function Home(){
  const [frequency,setFrequency]=useState(1000),[gain,setGain]=useState(6),[q,setQ]=useState(1),titleId=useId();
- const model=useMemo(()=>{const c=coeffs(frequency,gain,q),points=Array.from({length:500},(_,i)=>{const x=i/499*1000,f=logToFreq(i/499*1000),y=(DMAX-db(c,f))/(DMAX-DMIN)*430;return `${x.toFixed(2)},${y.toFixed(2)}`}).join(' '),centerX=freqToLog(frequency),centerDb=db(c,frequency),centerY=(DMAX-centerDb)/(DMAX-DMIN)*430;return{c,points,centerX,centerY,centerDb}},[frequency,gain,q]);
+ const model=useMemo(()=>{const c=peakingFilter.coefficients({frequency,gain,q,sampleRate:FS}),points=Array.from({length:500},(_,i)=>{const x=i/499*1000,f=logToFreq(i/499*1000),y=(DMAX-magnitudeDb(c,f,FS))/(DMAX-DMIN)*430;return `${x.toFixed(2)},${y.toFixed(2)}`}).join(' '),centerX=freqToLog(frequency),centerDb=magnitudeDb(c,frequency,FS),centerY=(DMAX-centerDb)/(DMAX-DMIN)*430;return{c,points,centerX,centerY,centerDb}},[frequency,gain,q]);
  const ft=[20,50,100,200,500,1000,2000,5000,10000,20000],dt=[24,18,12,6,0,-6,-12,-18,-24];
  return <main>
   <header className="topbar"><div className="brand"><span className="brand-mark" aria-hidden="true"><i/><i/><i/></span><span>BELL / EQ</span></div><div className="top-meta"><span className="status-dot"/>PEAKING FILTER <b>Fs {FS/1000} kHz</b></div></header>
