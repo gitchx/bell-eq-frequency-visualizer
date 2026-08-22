@@ -8,24 +8,15 @@
 2. ファイルをダブルクリック
 3. Chromeで開く
 
-Node.js、Next.js、Webサーバー、外部ライブラリは必要ありません。`index.html`が画面とSVG描画を、`biquad.js`が読みやすく分離した音響計算を担当します。
+Node.js、Next.js、Webサーバー、外部ライブラリは必要ありません。音響計算と描画処理は別々のJavaScriptファイルに分けています。
 
 ## ファイル
 
-- `index.html`: UI、CSS、スライダー操作、SVG描画
-- `biquad.js`: Web表示用の係数・周波数応答計算。係数名はRNBOとの対応が分かる`feedforward` / `feedback`
-- `rnbo-codebox.rnboscript`: RNBOの`codebox~`へコピーできるDSP実装
+- `index.html`: 画面構造とCSS
+- `biquad.js`: Bell EQ係数と周波数応答の音響計算
+- `visualizer.js`: スライダー操作、座標変換、SVGグリッドとカーブの描画
 
-## RNBOへ移植する
-
-[`rnbo-codebox.rnboscript`](rnbo-codebox.rnboscript)をRNBOの`codebox~`へ貼り付けます。
-
-- `in1`: 入力信号
-- `out1`: Bell EQ処理後の信号
-- Parameters: `frequency`、`gainDb`、`q`
-- Sample Rate: RNBOの組み込み定数`samplerate`を使用
-
-RNBOの`biquad.next(input, a0, a1, a2, b1, b2)`では、`a0/a1/a2`がフィードフォワード、`b1/b2`がフィードバックです。Webコードでは混同を避けるため、役割をそのまま`feedforward0..2`、`feedback1..2`と表記しています。
+`biquad.js`は係数名を`feedforward0..2`、`feedback1..2`としており、RNBOのbiquadへ対応づけやすい構成です。RNBO専用スクリプトは含めていません。
 
 ## 操作範囲
 
