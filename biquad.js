@@ -15,7 +15,9 @@
    * @param {number} parameters.gainDb     Boost/cut amount in dB.
    * @param {number} parameters.q          Quality factor.
    * @param {number} parameters.sampleRate Sample rate in Hz.
-   * @returns {{b0:number, b1:number, b2:number, a1:number, a2:number}}
+   * Naming intentionally matches RNBO's biquad.next() signal-flow roles.
+   *
+   * @returns {{feedforward0:number, feedforward1:number, feedforward2:number, feedback1:number, feedback2:number}}
    */
   function peakingCoefficients({ frequency, gainDb, q, sampleRate }) {
     const amplitude = Math.pow(10, gainDb / 40);
@@ -27,21 +29,22 @@
     const a0 = 1 + alpha / amplitude;
 
     return {
-      b0: (1 + alpha * amplitude) / a0,
-      b1: (-2 * cosine) / a0,
-      b2: (1 - alpha * amplitude) / a0,
-      a1: (-2 * cosine) / a0,
-      a2: (1 - alpha / amplitude) / a0,
+      // RNBO: biquad.next(input, a0, a1, a2, b1, b2)
+      feedforward0: (1 + alpha * amplitude) / a0,
+      feedforward1: (-2 * cosine) / a0,
+      feedforward2: (1 - alpha * amplitude) / a0,
+      feedback1: (-2 * cosine) / a0,
+      feedback2: (1 - alpha / amplitude) / a0,
     };
   }
 
   /**
    * Evaluate 20 * log10(|H(e^jw)|) at one frequency.
    *
-   * H(z) = (b0 + b1*z^-1 + b2*z^-2)
-   *      / (1  + a1*z^-1 + a2*z^-2)
+   * H(z) = (ff0 + ff1*z^-1 + ff2*z^-2)
+   *      / (1   + fb1*z^-1 + fb2*z^-2)
    *
-   * @param {{b0:number, b1:number, b2:number, a1:number, a2:number}} coefficients
+   * @param {{feedforward0:number, feedforward1:number, feedforward2:number, feedback1:number, feedback2:number}} coefficients
    * @param {number} frequency  Evaluation frequency in Hz.
    * @param {number} sampleRate Sample rate in Hz.
    * @returns {number} Magnitude in dB.
@@ -54,13 +57,15 @@
     const sin2 = Math.sin(2 * omega);
 
     const numeratorReal =
-      coefficients.b0 + coefficients.b1 * cos1 + coefficients.b2 * cos2;
+      coefficients.feedforward0 +
+      coefficients.feedforward1 * cos1 +
+      coefficients.feedforward2 * cos2;
     const numeratorImaginary =
-      -coefficients.b1 * sin1 - coefficients.b2 * sin2;
+      -coefficients.feedforward1 * sin1 - coefficients.feedforward2 * sin2;
     const denominatorReal =
-      1 + coefficients.a1 * cos1 + coefficients.a2 * cos2;
+      1 + coefficients.feedback1 * cos1 + coefficients.feedback2 * cos2;
     const denominatorImaginary =
-      -coefficients.a1 * sin1 - coefficients.a2 * sin2;
+      -coefficients.feedback1 * sin1 - coefficients.feedback2 * sin2;
 
     const numeratorMagnitude = Math.hypot(numeratorReal, numeratorImaginary);
     const denominatorMagnitude = Math.hypot(denominatorReal, denominatorImaginary);
