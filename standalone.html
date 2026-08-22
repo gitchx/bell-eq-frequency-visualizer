@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Bell EQ Frequency Response Visualizer</title>
+  <style>
+    :root{--paper:#f2efe8;--ink:#151613;--orange:#ff5a1f;--muted:#777b76}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,sans-serif}.top{height:64px;border-bottom:1px solid;padding:0 clamp(16px,4vw,60px);display:flex;align-items:center;justify-content:space-between;font-weight:900;letter-spacing:.14em}.top small{font:700 10px monospace;background:var(--ink);color:var(--paper);padding:9px}.page{width:min(1280px,calc(100% - 28px));margin:auto;padding:clamp(32px,6vw,70px) 0}.tag{color:var(--orange);font:700 10px monospace;letter-spacing:.2em}h1{font-size:clamp(42px,8vw,100px);letter-spacing:-.065em;line-height:.85;margin:14px 0 30px}.panel{background:#121312;color:#f7f1e8;box-shadow:0 20px 50px #0002}.readout{height:70px;padding:0 clamp(18px,3vw,38px);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #fff2;font:700 11px monospace;letter-spacing:.12em}.readout strong{color:var(--orange);font-size:21px}.live{color:#8c908b}.live:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#55aa69;margin-right:8px}.chart{height:clamp(300px,45vw,520px);padding:20px 30px 8px 42px}.chart svg{width:100%;height:100%;overflow:visible}.grid{stroke:#fff;stroke-opacity:.1;stroke-width:1;vector-effect:non-scaling-stroke}.zero{stroke:#fff;stroke-opacity:.38}.axis{fill:#777b76;font:10px monospace}.fill{fill:url(#fill)}.curve{fill:none;stroke:#ff6830;stroke-width:2.5;vector-effect:non-scaling-stroke}.cursor{stroke:#ff6830;stroke-opacity:.5;stroke-dasharray:4 5}.ring{fill:#121312;stroke:#ff6830;stroke-width:2;vector-effect:non-scaling-stroke}.dot{fill:#fff}.controls{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #fff2}.control{padding:22px clamp(18px,3vw,36px);border-right:1px solid #fff2}.control:last-child{border:0}.label{display:flex;justify-content:space-between;color:var(--muted);font:700 9px monospace;letter-spacing:.12em;text-transform:uppercase}.label output{color:#fff;font-size:15px}.control input{width:100%;height:36px;margin:12px 0 0;appearance:none;background:transparent;touch-action:pan-y}.control input::-webkit-slider-runnable-track{height:3px;background:linear-gradient(90deg,var(--orange) 0 var(--p),#3b3d3a var(--p));border-radius:3px}.control input::-webkit-slider-thumb{appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:6px solid var(--orange);margin-top:-10px}.coeffs{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid;border-top:0}.coeffs div{padding:17px;border-right:1px solid #cfc9bd;font:12px monospace}.coeffs div:last-child{border:0}.coeffs span{display:block;color:#77736b;font-size:9px;margin-bottom:7px}footer{padding:24px 0;color:#77736b;font:9px monospace;display:flex;justify-content:space-between}@media(max-width:720px){.controls{grid-template-columns:1fr}.control{border-right:0;border-bottom:1px solid #fff2}.chart{height:300px;padding-left:34px}.coeffs{grid-template-columns:repeat(3,1fr)}.coeffs div:nth-child(3){border-right:0}.coeffs div:nth-child(n+4){border-top:1px solid #cfc9bd}footer{gap:10px;flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <header class="top"><span>● BELL / EQ</span><small>Fs 48 kHz</small></header>
+  <main class="page">
+    <div class="tag">STANDALONE BIQUAD LAB</div><h1>Frequency Response</h1>
+    <section class="panel">
+      <div class="readout"><span>MAGNITUDE&nbsp; <strong id="magnitude">+6.00 dB</strong>&nbsp; <span id="at">@ 1 kHz</span></span><span class="live">LIVE</span></div>
+      <div class="chart"><svg id="graph" viewBox="-48 -12 1090 480" preserveAspectRatio="none" role="img" aria-label="Bell EQ response"><defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff6b35" stop-opacity=".24"/><stop offset="1" stop-color="#ff6b35" stop-opacity="0"/></linearGradient></defs><g id="grid"></g><polygon id="area" class="fill"/><polyline id="curve" class="curve"/><line id="cursor" class="cursor" y1="0" y2="430"/><circle id="ring" class="ring" r="14"/><circle id="dot" class="dot" r="5"/></svg></div>
+      <div class="controls">
+        <label class="control"><span class="label">Center Frequency <output id="freqOut">1 kHz</output></span><input id="freq" aria-label="Center Frequency" type="range" min="0" max="1000" step="1" value="566.323"></label>
+        <label class="control"><span class="label">Gain <output id="gainOut">+6.0 dB</output></span><input id="gain" aria-label="Gain" type="range" min="-18" max="18" step="0.1" value="6"></label>
+        <label class="control"><span class="label">Q / Bandwidth <output id="qOut">1.00</output></span><input id="q" aria-label="Q" type="range" min="0.1" max="10" step="0.01" value="1"></label>
+      </div>
+    </section>
+    <div class="coeffs" id="coeffs"></div>
+    <footer><span>20 Hz — 20 kHz · LOG SCALE</span><span>20 log₁₀ |H(eʲω)|</span></footer>
+  </main>
+  <script>
+    const FS=48000,FMIN=20,FMAX=20000,DMIN=-24,DMAX=24;
+    const $=id=>document.getElementById(id);
+    const logToFreq=v=>FMIN*Math.pow(FMAX/FMIN,v/1000);
+    const freqToLog=f=>Math.log(f/FMIN)/Math.log(FMAX/FMIN)*1000;
+    const fmtFreq=f=>f>=1000?`${(f/1000).toFixed(f>=10000?1:2).replace(/0+$/,'').replace(/\.$/,'')} kHz`:`${Math.round(f)} Hz`;
+    function peaking(f,g,q){const A=10**(g/40),w=2*Math.PI*f/FS,alpha=Math.sin(w)/(2*q),cos=Math.cos(w),a0=1+alpha/A;return{b0:(1+alpha*A)/a0,b1:-2*cos/a0,b2:(1-alpha*A)/a0,a1:-2*cos/a0,a2:(1-alpha/A)/a0}}
+    function magnitude(c,f){const w=2*Math.PI*f/FS,c1=Math.cos(w),s1=Math.sin(w),c2=Math.cos(2*w),s2=Math.sin(2*w),nr=c.b0+c.b1*c1+c.b2*c2,ni=-c.b1*s1-c.b2*s2,dr=1+c.a1*c1+c.a2*c2,di=-c.a1*s1-c.a2*s2;return 20*Math.log10(Math.hypot(nr,ni)/Math.hypot(dr,di))}
+    function makeGrid(){let s='';[24,18,12,6,0,-6,-12,-18,-24].forEach(d=>{const y=(DMAX-d)/(DMAX-DMIN)*430;s+=`<line x1="0" y1="${y}" x2="1000" y2="${y}" class="grid ${d===0?'zero':''}"/><text x="-12" y="${y+4}" text-anchor="end" class="axis">${d>0?'+':''}${d}</text>`});[20,50,100,200,500,1000,2000,5000,10000,20000].forEach(f=>{const x=freqToLog(f);s+=`<line x1="${x}" y1="0" x2="${x}" y2="430" class="grid"/><text x="${x}" y="458" text-anchor="${f===20?'start':f===20000?'end':'middle'}" class="axis">${f>=1000?f/1000+'k':f}</text>`});$('grid').innerHTML=s}
+    function render(){const f=logToFreq(+$('freq').value),g=+$('gain').value,q=+$('q').value,c=peaking(f,g,q),pts=[];for(let i=0;i<500;i++){const x=i/499*1000,hz=logToFreq(i/499*1000),y=(DMAX-magnitude(c,hz))/(DMAX-DMIN)*430;pts.push(`${x.toFixed(2)},${y.toFixed(2)}`)}const x=freqToLog(f),m=magnitude(c,f),y=(DMAX-m)/(DMAX-DMIN)*430;$('curve').setAttribute('points',pts.join(' '));$('area').setAttribute('points',`0,215 ${pts.join(' ')} 1000,215`);['cursor','ring','dot'].forEach(id=>$(id).setAttribute('x1',x));$('cursor').setAttribute('x2',x);['ring','dot'].forEach(id=>{$(id).setAttribute('cx',x);$(id).setAttribute('cy',y)});$('freqOut').value=fmtFreq(f);$('gainOut').value=`${g>0?'+':''}${g.toFixed(1)} dB`;$('qOut').value=q.toFixed(2);$('magnitude').textContent=`${m>=0?'+':''}${m.toFixed(2)} dB`;$('at').textContent=`@ ${fmtFreq(f)}`;$('coeffs').innerHTML=Object.entries(c).map(([k,v])=>`<div><span>${k}</span>${v.toFixed(6)}</div>`).join(' ');document.querySelectorAll('input').forEach(el=>el.style.setProperty('--p',`${(el.value-el.min)/(el.max-el.min)*100}%`))}
+    makeGrid();document.querySelectorAll('input').forEach(el=>el.addEventListener('input',render));render();
+  </script>
+</body>
+</html>

@@ -15,6 +15,10 @@ pnpm install
 pnpm dev
 ```
 
+## インストール不要版
+
+[`standalone.html`](standalone.html)をダウンロードしてダブルクリックすると、Chromeなどのブラウザでそのまま動作します。外部ライブラリ、Webサーバー、Node.jsは不要です。
+
 ## 他のフィルターを追加する
 
 係数計算と周波数応答計算は [`lib/biquad.ts`](lib/biquad.ts) に分離されています。
