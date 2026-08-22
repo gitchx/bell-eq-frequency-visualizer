@@ -18,6 +18,45 @@ Node.js、Next.js、Webサーバー、外部ライブラリは必要ありませ
 
 `biquad.js`は係数名を`feedforward0..2`、`feedback1..2`としており、RNBOのbiquadへ対応づけやすい構成です。RNBO専用スクリプトは含めていません。
 
+## biquad計算の役割
+
+Web版は音声を再生・加工しません。`BiquadFilterNode`やサンプル単位の差分方程式による実音声処理は含まれておらず、グラフ表示に必要な計算だけを行います。
+
+### `peakingCoefficients()`
+
+Center Frequency、Gain、Q、Sample Rateから、Bell EQの正規化済みbiquad係数を計算します。
+
+```text
+feedforward0, feedforward1, feedforward2
+feedback1, feedback2
+```
+
+この関数がBell EQの形を決めます。
+
+### `magnitudeDb()`
+
+`peakingCoefficients()`が作った係数をbiquadの伝達関数へ代入し、指定周波数における振幅を求めます。
+
+```text
+H(e^jw) =
+  (ff0 + ff1 * e^(-jw) + ff2 * e^(-j2w))
+  / (1 + fb1 * e^(-jw) + fb2 * e^(-j2w))
+
+magnitudeDb = 20 * log10(|H(e^jw)|)
+```
+
+`visualizer.js`は20 Hz〜20 kHzの500点について`magnitudeDb()`を呼び出し、結果をSVGカーブとして描画します。
+
+```text
+Frequency / Gain / Q
+        ↓
+peakingCoefficients()  biquad係数を作る
+        ↓
+magnitudeDb()          各周波数での増減量をdBで求める
+        ↓
+visualizer.js          SVGへ描画する
+```
+
 ## 操作範囲
 
 - Center Frequency: 20 Hz〜20 kHz（対数スケール）
